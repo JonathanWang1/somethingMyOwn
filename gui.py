@@ -47,7 +47,7 @@ class Example(QtGui.QMainWindow):
         self.directionZ.setChecked(True)
         
         accuracyLabel = QtGui.QLabel("Slice Accuracy")
-        accuracyTextLine = QtGui.QLineEdit("how many slices do you want")
+        self.sliceTextLine = QtGui.QLineEdit("how many slices do you want")
         #self.sliceDirection.addButton(directionX)
         #self.sliceDirection.addButton(directionY)
         #self.sliceDirection.addButton(directionZ)
@@ -56,7 +56,7 @@ class Example(QtGui.QMainWindow):
         vBox1.addWidget(self.directionY)
         vBox1.addWidget(self.directionZ)
         vBox1.addWidget(accuracyLabel)
-        vBox1.addWidget(accuracyTextLine)
+        vBox1.addWidget(self.sliceTextLine)
         vBox1.addStretch(1)
         self.sliceGroup.setLayout(vBox1)
         self.vl.addWidget(self.sliceGroup)
@@ -113,7 +113,14 @@ class Example(QtGui.QMainWindow):
             if(convert.convert(self.fname)):
                 meshFile = self.fname[:-3]+"mesh"
                 print meshFile;
-                if(execution(meshFile, direction)):
+                sliceText = self.sliceTextLine.text()
+                print sliceText
+                print type(sliceText)
+                sliceInt = sliceText.toUInt()
+                #slcieInt = int(sliceFloat)
+                print sliceInt[0]
+                print type(sliceInt[0])
+                if(execution(meshFile, direction, sliceInt[0])):
                     print "cool, it is done"
                     f=gzip.open(self.fname[:-3]+"vox","rb")
                     data=pickle.load(f)

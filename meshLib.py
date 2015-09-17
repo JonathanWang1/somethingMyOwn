@@ -234,11 +234,12 @@ def find_intersection_contours(vertices,triangles,point,normal,tol=0.0001):
 			newContourNeeded=True
 	return contours
 
-def prepare_voxel_slice(res,llc,urc,direction):
+def prepare_voxel_slice(slices,llc,urc,direction):
 	"""Builds a single layer container for the voxelizer routine. -- prepare_voxel_slice(size,res)"""
 	size=urc-llc
+	res = float(size[direction] / slices)
 	dims=numpy.ceil(size/res)
-	return numpy.zeros((dims[(direction+1) % 3],dims[(direction+2) % 3]),dtype='bool')
+	return numpy.zeros((dims[(direction+1) % 3],dims[(direction+2) % 3]),dtype='bool'), res
 
 def voxelize_single_contour(contour,res,llc,voxSlice,direction):
 	"""Creates a single voxel slice from the provided contour. -- voxelize_single_contour(contour,res,llc,voxSlice)"""
@@ -252,7 +253,7 @@ def voxelize_single_contour(contour,res,llc,voxSlice,direction):
 	
 	# prepare the list of points to check
 	indices=numpy.transpose(numpy.array(numpy.nonzero(voxSlice==False)))
-	positions=[(p[(direction+1)%3],p[(direction+2)%3]) for p in list(indices*res+numpy.array([llc[(direction+1)%3],llc[(direction+2)%3]]))]
+	positions=[(p[0],p[1]) for p in list(indices*res+numpy.array([llc[(direction+1)%3],llc[(direction+2)%3]]))]
 	
 	# do the check and reshape the result
 	result=numpy.array(path.contains_points(positions),dtype='bool').reshape(voxSlice.shape)
@@ -311,12 +312,12 @@ def point_list(res,llc,urc,direction):
 		points=[llc+numpy.array([0,0,deltaZ*i]) for i in range(numPoints)]
 		return points, points[0], points[-1]
 
-def voxelize(points,triangles,res, direction):
+def voxelize(points,triangles,slices, direction):
 	""" Voxelize the volume defined by the points and triangles pointer list with voxels of res side length. -- voxelize(points,triangles,res)"""
 	
 	llc,urc=find_boundbox(points) # find the lower left corner (llc) and upper right corner (urc) of the vertices
 	
-	sliceProto=prepare_voxel_slice(res,llc,urc,direction) # create the prototype slice volume for the voxel slicing
+	sliceProto, res=prepare_voxel_slice(slices,llc,urc,direction) # create the prototype slice volume for the voxel slicing
 	
 	slicePoints, minPoints, maxPoints=point_list(res,llc,urc,direction) # prepare the list of points to slice at
 	
@@ -362,7 +363,7 @@ def voxelize(points,triangles,res, direction):
 		j = numpy.nditer(boolResult, flags=['multi_index'], op_flags=['readwrite'])
 		while not j.finished:
 			if j[0] == True:
-				tupleResult[j.multi_index] = round((i[2] - minValue) * ratio)
+				tupleResult[j.multi_index] = round((i[direction] - minValue) * ratio)
 				#tupleResult[j.multi_index] = 78
 			else:
 				tupleResult[j.multi_index] = 0

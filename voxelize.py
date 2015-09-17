@@ -7,11 +7,12 @@ import sys
 import os.path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-def execution(fileName,direction):
+def execution(fileName,direction, sliceInt):
 	try:
 		vertices,triangles=loadmesh(fileName)
-		res=float(0.999)
-		result=voxelize(vertices,triangles,res,direction)
+		#slices = 101
+		#res=float(0.999)
+		result=voxelize(vertices,triangles,sliceInt,direction)
 		fname=fileName[:-4]+"vox"
 		print "...saving voxel data to: "+fname
 		f=gzip.open(fname,"wb")
