@@ -1,10 +1,12 @@
 import sys
 from PyQt4 import QtGui
+from PyQt4 import Qt
 import convert as convert
 from voxelize import *
 from matplotlib.cbook import Null
 from vtk.qt4.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 import vtk
+import numpy as np
 #from vtkTest import renderWin
 
 
@@ -38,7 +40,7 @@ class Example(QtGui.QMainWindow):
         self.vl = QtGui.QVBoxLayout()
         self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
         self.vl.addWidget(self.vtkWidget)
-        
+                
         self.sliceGroup = QtGui.QGroupBox("Slice Direction and Accuracy")
         #self.sliceDirection = QtGui.QButtonGroup()
         self.directionX = QtGui.QRadioButton("X")
@@ -61,8 +63,40 @@ class Example(QtGui.QMainWindow):
         self.sliceGroup.setLayout(vBox1)
         self.vl.addWidget(self.sliceGroup)
         
+        self.planeGroup = QtGui.QGroupBox("Select three points to identify the cut plane")
+        self.firstPlanePt = QtGui.QRadioButton("First Point")
+        self.secondPlanePt = QtGui.QRadioButton("Second Point")
+        self.thirdPlanePt = QtGui.QRadioButton("Third Point")
+        self.firstPlanePt.setChecked(True)
+        
+        self.firstPlanePtValue = QtGui.QLabel("No Value")
+        self.secondPlanePtValue = QtGui.QLabel("No Value")
+        self.thirdPlanePtValue = QtGui.QLabel("No Value")
+        
+        hBox1 = QtGui.QHBoxLayout()
+        hBox1.addWidget(self.firstPlanePt)
+        hBox1.addWidget(self.firstPlanePtValue)
+        hBox2 = QtGui.QHBoxLayout()
+        hBox2.addWidget(self.secondPlanePt)
+        hBox2.addWidget(self.secondPlanePtValue)
+        hBox3 = QtGui.QHBoxLayout()
+        hBox3.addWidget(self.thirdPlanePt)
+        hBox3.addWidget(self.thirdPlanePtValue)
+        
+        self.confirmPlane = QtGui.QPushButton("Confirm")
+        
+        vBox2 = QtGui.QVBoxLayout()
+        vBox2.addLayout(hBox1)
+        vBox2.addLayout(hBox2)
+        vBox2.addLayout(hBox3)
+        vBox2.addWidget(self.confirmPlane)
+        vBox2.addStretch(1)
+        self.planeGroup.setLayout(vBox2)
+        self.vl.addWidget(self.planeGroup)
+        
         self.volume = vtk.vtkVolume()
         self.actor = vtk.vtkActor()
+        self.planeActor=vtk.vtkActor()
  
         self.ren = vtk.vtkRenderer()
         self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
@@ -125,21 +159,21 @@ class Example(QtGui.QMainWindow):
                     f=gzip.open(self.fname[:-3]+"vox","rb")
                     data=pickle.load(f)
                     self.data_matrix=numpy.uint8(data) 
-                    dataImporter = vtk.vtkImageImport()
+                    self.dataImporter = vtk.vtkImageImport()
                     data_string = self.data_matrix.tostring()
-                    dataImporter.CopyImportVoidPointer(data_string, len(data_string))
+                    self.dataImporter.CopyImportVoidPointer(data_string, len(data_string))
                     # The type of the newly imported data is set to unsigned char (uint8)
-                    dataImporter.SetDataScalarTypeToUnsignedChar()
+                    self.dataImporter.SetDataScalarTypeToUnsignedChar()
                     # Because the data that is imported only contains an intensity value (it isnt RGB-coded or someting similar), the importer
                     # must be told this is the case.
-                    dataImporter.SetNumberOfScalarComponents(1)
+                    self.dataImporter.SetNumberOfScalarComponents(1)
                     # The following two functions describe how the data is stored and the dimensions of the array it is stored in. For this
                     # simple case, all axes are of length 75 and begins with the first element. For other data, this is probably not the case.
                     # I have to admit however, that I honestly dont know the difference between SetDataExtent() and SetWholeExtent() although
                     # VTK complains if not both are used.
                     xdim,ydim,zdim=self.data_matrix.shape
-                    dataImporter.SetDataExtent(0, zdim-1, 0, ydim-1, 0, xdim-1)
-                    dataImporter.SetWholeExtent(0, zdim-1, 0, ydim-1, 0, xdim-1)
+                    self.dataImporter.SetDataExtent(0, zdim-1, 0, ydim-1, 0, xdim-1)
+                    self.dataImporter.SetWholeExtent(0, zdim-1, 0, ydim-1, 0, xdim-1)
                     
                     # The following class is used to store transparencyv-values for later retrival. In our case, we want the value 0 to be
                     # completly opaque whereas the three different cubes are given different transperancy-values to show how it works.
@@ -153,10 +187,21 @@ class Example(QtGui.QMainWindow):
                     # This class stores color data and can create color tables from a few color points. For this demo, we want the three cubes
                     # to be of the colors red green and blue.
                     colorFunc = vtk.vtkColorTransferFunction()
-                    colorFunc.AddRGBPoint(1, 1.0, 0.0, 0.0)
-                    #colorFunc.AddRGBPoint(170, 0.0, 1.0, 0.0)
-                    colorFunc.AddRGBPoint(255, 0.0, 0.0, 1.0)
-                    #colorFunc.AddRGBPoint(0, 1.0, 1.0, 1.0)
+                    if(direction == 0):
+                        colorFunc.AddRGBPoint(1, 0.0, 1.0, 1.0)
+                        #colorFunc.AddRGBPoint(170, 0.0, 1.0, 0.0)
+                        colorFunc.AddRGBPoint(255, 1.0, 1.0, 0.0)
+                        #colorFunc.AddRGBPoint(0, 1.0, 1.0, 1.0)
+                    if(direction == 1):
+                        colorFunc.AddRGBPoint(1, 1.0, 0.0, 1.0)
+                        #colorFunc.AddRGBPoint(170, 0.0, 1.0, 0.0)
+                        colorFunc.AddRGBPoint(255, 0.0, 1.0, 1.0)
+                        #colorFunc.AddRGBPoint(0, 1.0, 1.0, 1.0)
+                    if(direction == 2):
+                        colorFunc.AddRGBPoint(1, 1.0, 0.0, 0.0)
+                        #colorFunc.AddRGBPoint(170, 0.0, 1.0, 0.0)
+                        colorFunc.AddRGBPoint(255, 0.0, 0.0, 1.0)
+                        #colorFunc.AddRGBPoint(0, 1.0, 1.0, 1.0)
                     
                     # The preavius two classes stored properties. Because we want to apply these properties to the volume we want to render,
                     # we have to store them in a class that stores volume prpoperties.
@@ -172,7 +217,7 @@ class Example(QtGui.QMainWindow):
                     # We can finally create our volume. We also have to specify the data for it, as well as how the data will be rendered.
                     volumeMapper = vtk.vtkVolumeRayCastMapper()
                     volumeMapper.SetVolumeRayCastFunction(compositeFunction)
-                    volumeMapper.SetInputConnection(dataImporter.GetOutputPort())
+                    volumeMapper.SetInputConnection(self.dataImporter.GetOutputPort())
                     
                     # The class vtkVolume is used to pair the preaviusly declared volume as well as the properties to be used when rendering that volume.
                     
@@ -226,6 +271,17 @@ class Example(QtGui.QMainWindow):
                             selPt = self.picker.GetSelectionPoint()
                             pickPos = self.picker.GetPickPosition()
                             pickPosInt = (round(pickPos[0]), round(pickPos[1]),round(pickPos[2]))
+                            pickPosIntStr = str(pickPosInt)
+                            pickPosIntQStr = Qt.QString(pickPosIntStr)
+                            if(self.firstPlanePt.isChecked()):
+                                self.firstPlanePtValueRecord = pickPosInt
+                                self.firstPlanePtValue.setText(pickPosIntQStr)
+                            if(self.secondPlanePt.isChecked()):
+                                self.secondPlanePtValueRecord = pickPosInt
+                                self.secondPlanePtValue.setText(pickPosIntQStr)
+                            if(self.thirdPlanePt.isChecked()):
+                                self.thirdPlanePtValueRecord = pickPosInt
+                                self.thirdPlanePtValue.setText(pickPosIntQStr)
                             pickValue = self.data_matrix[pickPosInt]
                             self.textMapper.SetInput("(%.3i, %.3i, %.3i)"%pickPosInt)
                             print pickValue
@@ -243,6 +299,8 @@ class Example(QtGui.QMainWindow):
                     # Add the actors to the renderer, set the background and size
                     self.ren.AddActor2D(self.textActor)
                     
+                    self.confirmPlane.clicked.connect(self.addPlaneCutter)
+                    
                     self.iren.Initialize()
                     # Initially pick the cell at this location.
                     self.picker.Pick(85, 126, 0, self.ren)
@@ -256,6 +314,31 @@ class Example(QtGui.QMainWindow):
                     print "cannot convert to vox"
             else:
                 print "cannot convert to mesh"
+    
+    def addPlaneCutter(self):
+        self.ren.RemoveActor(self.planeActor)
+        plane=vtk.vtkPlane()
+        plane.SetOrigin(float(self.firstPlanePtValueRecord[0]),float(self.firstPlanePtValueRecord[1]), float(self.firstPlanePtValueRecord[2]) )
+        a = np.array([self.secondPlanePtValueRecord[0]-self.firstPlanePtValueRecord[0], self.secondPlanePtValueRecord[1]-self.firstPlanePtValueRecord[1], self.secondPlanePtValueRecord[2]-self.firstPlanePtValueRecord[2]])
+        b = np.array([self.thirdPlanePtValueRecord[0]-self.firstPlanePtValueRecord[0], self.thirdPlanePtValueRecord[1]-self.firstPlanePtValueRecord[1],self.thirdPlanePtValueRecord[2]-self.firstPlanePtValueRecord[2]])
+        c = np.cross(a, b)
+        plane.SetNormal(c)
+                    
+        #create cutter
+        cutter=vtk.vtkCutter()
+        cutter.SetCutFunction(plane)
+        cutter.SetInputConnection(self.dataImporter.GetOutputPort())
+        cutter.Update()
+        cutterMapper=vtk.vtkPolyDataMapper()
+        cutterMapper.SetInputConnection(cutter.GetOutputPort())
+                    
+        
+        self.planeActor.GetProperty().SetColor(1.0,1,0)
+        self.planeActor.GetProperty().SetLineWidth(2)
+        self.planeActor.SetMapper(cutterMapper)
+                    
+        self.ren.AddActor(self.planeActor)
+        
                     
 def main():
     
