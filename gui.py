@@ -102,8 +102,74 @@ class Example(QtGui.QMainWindow):
         vBox2.addLayout(hBox4)
         vBox2.addStretch(1)
         self.planeGroup.setLayout(vBox2)
-        self.vl.addWidget(self.planeGroup)
+        #self.vl.addWidget(self.planeGroup)
         
+        self.pointGroup = QtGui.QGroupBox("Select One points to identify the control point")
+        self.controlPt = QtGui.QRadioButton("Control Point")
+        self.controlPt.setChecked(True)
+        
+        self.controlPtValue = QtGui.QLabel("No Value")
+        
+        controlPtHBox1 = QtGui.QHBoxLayout()
+        controlPtHBox1.addWidget(self.controlPt)
+        controlPtHBox1.addWidget(self.controlPtValue)
+        
+        self.confirmPoint = QtGui.QPushButton("Confirm")
+        self.voxFromPoint = QtGui.QPushButton("Voxelize")
+        #self.confirmPoint.clicked.connect(self.addPlaneCutter)  FIXME
+        #self.voxFromPoint.clicked.connect(self.convertToVOX2)  FIXME
+        controlPtHBox2 = QtGui.QHBoxLayout()
+        controlPtHBox2.addWidget(self.confirmPoint)
+        controlPtHBox2.addWidget(self.voxFromPoint)
+        
+        controlPtVBox = QtGui.QVBoxLayout()
+        controlPtVBox.addLayout(controlPtHBox1)
+        controlPtVBox.addStretch(10)
+        controlPtVBox.addLayout(controlPtHBox2)
+        controlPtVBox.addStretch(1)
+        self.pointGroup.setLayout(controlPtVBox)
+        #self.vl.addWidget(self.pointGroup)
+        
+        self.lineGroup = QtGui.QGroupBox("Select two points to identify the control line")
+        self.firstLinePt = QtGui.QRadioButton("Start Point")
+        self.secondLinePt = QtGui.QRadioButton("End Point")
+        self.firstLinePt.setChecked(True)
+        
+        self.firstLinePtValue = QtGui.QLabel("No Value")
+        self.secondLinePtValue = QtGui.QLabel("No Value")
+        
+        controlLineHBox1 = QtGui.QHBoxLayout()
+        controlLineHBox1.addWidget(self.firstLinePt)
+        controlLineHBox1.addWidget(self.firstLinePtValue)
+        controlLineHBox2 = QtGui.QHBoxLayout()
+        controlLineHBox2.addWidget(self.secondLinePt)
+        controlLineHBox2.addWidget(self.secondLinePtValue)
+        
+        self.confirmLine = QtGui.QPushButton("Confirm")
+        self.voxFromLine = QtGui.QPushButton("Voxelize")
+        #self.confirmLine.clicked.connect(self.addPlaneCutter)  FIXME
+        #self.voxFromLine.clicked.connect(self.convertToVOX2)  FIXME
+        controlLineHBox3 = QtGui.QHBoxLayout()
+        controlLineHBox3.addWidget(self.confirmLine)
+        controlLineHBox3.addWidget(self.voxFromLine)
+        
+        controlLineVBox = QtGui.QVBoxLayout()
+        controlLineVBox.addLayout(controlLineHBox1)
+        controlLineVBox.addLayout(controlLineHBox2)
+        controlLineVBox.addStretch(8)
+        controlLineVBox.addLayout(controlLineHBox3)
+        controlLineVBox.addStretch(1)
+        self.lineGroup.setLayout(controlLineVBox)
+        #self.vl.addWidget(self.lineGroup)
+        
+        self.controlGroup = QtGui.QGroupBox("Control Widget")
+        self.controlLayout = QtGui.QHBoxLayout()
+        self.controlLayout.addWidget(self.planeGroup)
+        self.controlLayout.addWidget(self.pointGroup)
+        self.controlLayout.addWidget(self.lineGroup)
+        self.controlGroup.setLayout(self.controlLayout)
+        self.vl.addWidget(self.controlGroup)
+             
         self.volume = vtk.vtkVolume()
         self.actor = vtk.vtkActor()
         self.planeActor=vtk.vtkActor()
