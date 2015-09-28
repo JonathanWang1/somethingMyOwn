@@ -312,7 +312,7 @@ def point_list(res,llc,urc,direction):
 		points=[llc+numpy.array([0,0,deltaZ*i]) for i in range(numPoints)]
 		return points, points[0], points[-1]
 
-def voxelize(points,triangles,slices, direction):
+def voxelize1(points,triangles,slices, direction):
 	""" Voxelize the volume defined by the points and triangles pointer list with voxels of res side length. -- voxelize(points,triangles,res)"""
 	
 	llc,urc=find_boundbox(points) # find the lower left corner (llc) and upper right corner (urc) of the vertices
@@ -328,24 +328,6 @@ def voxelize(points,triangles,slices, direction):
 	#layers=pool.map(partialVoxelSlicer,slicePoints) # perform the voxel conversion
 	
 	#volume=numpy.array(layers,dtype='bool') # create the 3d volume
-	
-	#return volume
-	#layers = list()
-	#maxValue = max(slicePoints[2])
-	#minValue = min(slicePoints[2])
-	#ratio = 255 / (maxValue - minValue)
-	
-	#for i in slicePoints:
-	#	boolResult = voxel_slice(i, points, triangles, res, llc, sliceProto)
-	#	floatResult = boolResult.astype(float)
-	#	for j in numpy.nditer(floatResult, op_flags=['readwrite']):
-	#		if j == 1:
-	#			j[...] = (i[2] - minValue) * ratio
-	#		else:
-	#			j[...] = 0
-	#	layers.append(floatResult)
-	
-	#volume=numpy.array(layers,dtype='float') # create the 3d volume
 	
 	#return volume
 	layers = list()
@@ -365,6 +347,56 @@ def voxelize(points,triangles,slices, direction):
 			if j[0] == True:
 				tupleResult[j.multi_index] = round((i[direction] - minValue) * ratio)
 				#tupleResult[j.multi_index] = 78
+			else:
+				tupleResult[j.multi_index] = 0
+			j.iternext()
+		layers.append(tupleResult)
+	print "i got here"
+	volume=numpy.array(layers) # create the 3d volume
+	
+	return volume
+
+def voxelize2(points,triangles,slices, planeOrigin, planeNormal):
+	""" Voxelize the volume defined by the points and triangles pointer list with voxels of res side length. -- voxelize(points,triangles,res)"""
+	
+	llc,urc=find_boundbox(points) # find the lower left corner (llc) and upper right corner (urc) of the vertices
+	
+	sliceProto, res=prepare_voxel_slice(slices,llc,urc,2) # create the prototype slice volume for the voxel slicing
+	
+	slicePoints, minPoints, maxPoints=point_list(res,llc,urc,2) # prepare the list of points to slice at
+	
+	#partialVoxelSlicer=partial(voxel_slice,points=points,triangles=triangles,res=res,llc=llc,sliceProto=sliceProto) # prepare a single-input version of the voxel slicer for parallelization
+	
+	#pool=multiprocessing.Pool(processes=max(1,multiprocessing.cpu_count()-1)) 
+	
+	#layers=pool.map(partialVoxelSlicer,slicePoints) # perform the voxel conversion
+	
+	#volume=numpy.array(layers,dtype='bool') # create the 3d volume
+	
+	#return volume
+	layers = list()
+	#maxArray = numpy.amax(slicePoints, axis=0)
+	#minArray = numpy.amin(slicePoints, axis=0)
+
+	for i in slicePoints:
+		boolResult = voxel_slice(i, points, triangles, res, llc, sliceProto, 2)
+		print boolResult.shape
+		tupleResult = numpy.zeros(boolResult.shape, dtype=int)
+		tupleResult.astype(uint8)
+		j = numpy.nditer(boolResult, flags=['multi_index'], op_flags=['readwrite'])
+		while not j.finished:
+			if j[0] == True:
+				#tupleResult[j.multi_index] = round((i[direction] - minValue) * ratio)
+				#tupleResult[j.multi_index] = 78
+				print type(j.multi_index)
+				print j.multi_index
+				tupleResult[j.multi_index] = (j.multi_index[1] - planeOrigin[0]) * planeNormal[0] + (j.multi_index[0] - planeOrigin[1]) * planeNormal[1] + (i[2] - planeOrigin[2]) * planeNormal[2]
+				if(tupleResult[j.multi_index] > 0):
+					tupleResult[j.multi_index] = round(tupleResult[j.multi_index]) 
+				if(tupleResult[j.multi_index] == 0):
+					tupleResult[j.multi_index] = 1
+				if(tupleResult[j.multi_index] < 0):
+					tupleResult[j.multi_index] = round(0 - tupleResult[j.multi_index]) 
 			else:
 				tupleResult[j.multi_index] = 0
 			j.iternext()

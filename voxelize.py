@@ -12,7 +12,22 @@ def execution(fileName,direction, sliceInt):
 		vertices,triangles=loadmesh(fileName)
 		#slices = 101
 		#res=float(0.999)
-		result=voxelize(vertices,triangles,sliceInt,direction)
+		result=voxelize1(vertices,triangles,sliceInt,direction)
+		fname=fileName[:-4]+"vox"
+		print "...saving voxel data to: "+fname
+		f=gzip.open(fname,"wb")
+		pickle.dump(result,f)
+		return True
+	except:
+		print "Something wasn't right....\n\tcorrect usage: python voxelize.py <mesh file> <resolution>"
+		return False
+	
+def execution2(fileName, sliceInt, planeOrigin, planeNormal):
+	try:
+		vertices,triangles=loadmesh(fileName)
+		#slices = 101
+		#res=float(0.999)
+		result=voxelize2(vertices,triangles,sliceInt, planeOrigin, planeNormal)
 		fname=fileName[:-4]+"vox"
 		print "...saving voxel data to: "+fname
 		f=gzip.open(fname,"wb")

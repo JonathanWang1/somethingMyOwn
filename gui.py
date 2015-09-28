@@ -28,6 +28,13 @@ class Example(QtGui.QMainWindow):
         self.toolbar = self.addToolBar('Open')
         self.toolbar.addAction(openFile)
         
+        stlMesh = QtGui.QAction(QtGui.QIcon('mesh.png'), 'Mesh', self)
+        stlMesh.setStatusTip('Mesh File')
+        stlMesh.triggered.connect(self.stlToMesh)
+        
+        self.toolbar = self.addToolBar('Mesh')
+        self.toolbar.addAction(stlMesh)
+        
         conVert = QtGui.QAction(QtGui.QIcon('convert.png'), 'Convert', self)
         conVert.setShortcut('Ctrl+C')
         conVert.setStatusTip('Convert File')
@@ -50,9 +57,6 @@ class Example(QtGui.QMainWindow):
         
         accuracyLabel = QtGui.QLabel("Slice Accuracy")
         self.sliceTextLine = QtGui.QLineEdit("how many slices do you want")
-        #self.sliceDirection.addButton(directionX)
-        #self.sliceDirection.addButton(directionY)
-        #self.sliceDirection.addButton(directionZ)
         vBox1 = QtGui.QVBoxLayout()
         vBox1.addWidget(self.directionX)
         vBox1.addWidget(self.directionY)
@@ -84,12 +88,18 @@ class Example(QtGui.QMainWindow):
         hBox3.addWidget(self.thirdPlanePtValue)
         
         self.confirmPlane = QtGui.QPushButton("Confirm")
+        self.voxFromPlane = QtGui.QPushButton("Voxelize")
+        self.confirmPlane.clicked.connect(self.addPlaneCutter)
+        self.voxFromPlane.clicked.connect(self.convertToVOX2)
+        hBox4 = QtGui.QHBoxLayout()
+        hBox4.addWidget(self.confirmPlane)
+        hBox4.addWidget(self.voxFromPlane)
         
         vBox2 = QtGui.QVBoxLayout()
         vBox2.addLayout(hBox1)
         vBox2.addLayout(hBox2)
         vBox2.addLayout(hBox3)
-        vBox2.addWidget(self.confirmPlane)
+        vBox2.addLayout(hBox4)
         vBox2.addStretch(1)
         self.planeGroup.setLayout(vBox2)
         self.vl.addWidget(self.planeGroup)
@@ -104,10 +114,6 @@ class Example(QtGui.QMainWindow):
         
         self.frame.setLayout(self.vl)
         self.setCentralWidget(self.frame)
-        #grid = QtGui.QGridLayout()
-        #grid.addWidget(self.frame, 0, 0)
-        #grid.addWidget(self.sliceGroup, 0, 1)
-        #self.setLayout(grid)
  
         self.show()
         self.iren.Initialize()
@@ -117,9 +123,7 @@ class Example(QtGui.QMainWindow):
         self.show()
         
     def showDialog(self):
-
-        self.fname = str(QtGui.QFileDialog.getOpenFileName(self, 'Open file', 
-                '/home'))
+        self.fname = str(QtGui.QFileDialog.getOpenFileName(self, 'Open file', '/home'))
         reader = vtk.vtkSTLReader()
         reader.SetFileName(self.fname)
         mapper = vtk.vtkPolyDataMapper()
@@ -136,184 +140,154 @@ class Example(QtGui.QMainWindow):
         self.ren.ResetCamera()
         self.iren.Initialize()
         self.iren.Start()
+        
+    def stlToMesh(self):
+        if(self.fname != Null):
+            if(convert.convert(self.fname)):
+                self.meshFile = self.fname[:-3]+"mesh"
+                print self.meshFile; 
+            else:
+                print "cannot convert to mesh" 
+        else:
+            print "have not select a name"      
+    
     def convertToVOX(self):
+        if self.volume != Null:
+            self.ren.RemoveVolume(self.volume)
         if(self.directionX.isChecked()):
             direction = 0
         if(self.directionY.isChecked()):
             direction = 1
         if(self.directionZ.isChecked()):
             direction = 2
-        if(self.fname != Null):
-            if(convert.convert(self.fname)):
-                meshFile = self.fname[:-3]+"mesh"
-                print meshFile;
-                sliceText = self.sliceTextLine.text()
-                print sliceText
-                print type(sliceText)
-                sliceInt = sliceText.toUInt()
-                #slcieInt = int(sliceFloat)
-                print sliceInt[0]
-                print type(sliceInt[0])
-                if(execution(meshFile, direction, sliceInt[0])):
-                    print "cool, it is done"
-                    f=gzip.open(self.fname[:-3]+"vox","rb")
-                    data=pickle.load(f)
-                    self.data_matrix=numpy.uint8(data) 
-                    self.dataImporter = vtk.vtkImageImport()
-                    data_string = self.data_matrix.tostring()
-                    self.dataImporter.CopyImportVoidPointer(data_string, len(data_string))
-                    # The type of the newly imported data is set to unsigned char (uint8)
-                    self.dataImporter.SetDataScalarTypeToUnsignedChar()
-                    # Because the data that is imported only contains an intensity value (it isnt RGB-coded or someting similar), the importer
-                    # must be told this is the case.
-                    self.dataImporter.SetNumberOfScalarComponents(1)
-                    # The following two functions describe how the data is stored and the dimensions of the array it is stored in. For this
-                    # simple case, all axes are of length 75 and begins with the first element. For other data, this is probably not the case.
-                    # I have to admit however, that I honestly dont know the difference between SetDataExtent() and SetWholeExtent() although
-                    # VTK complains if not both are used.
-                    xdim,ydim,zdim=self.data_matrix.shape
-                    self.dataImporter.SetDataExtent(0, zdim-1, 0, ydim-1, 0, xdim-1)
-                    self.dataImporter.SetWholeExtent(0, zdim-1, 0, ydim-1, 0, xdim-1)
+        sliceText = self.sliceTextLine.text()
+        sliceInt = sliceText.toUInt()
+
+        if(execution(self.meshFile, direction, sliceInt[0])):
+            print "cool, it is done"
+            f=gzip.open(self.fname[:-3]+"vox","rb")
+            data=pickle.load(f)
+            self.data_matrix=numpy.uint8(data) 
+            self.dataImporter = vtk.vtkImageImport()
+            data_string = self.data_matrix.tostring()
+            self.dataImporter.CopyImportVoidPointer(data_string, len(data_string))
+            self.dataImporter.SetDataScalarTypeToUnsignedChar()
+            self.dataImporter.SetNumberOfScalarComponents(1)
+            xdim,ydim,zdim=self.data_matrix.shape
+            #self.dataImporter.SetDataExtent(0, zdim-1, 0, ydim-1, 0, xdim-1)
+            self.dataImporter.SetDataExtent(0, xdim-1, 0, ydim-1, 0, zdim-1)
+            #self.dataImporter.SetWholeExtent(0, zdim-1, 0, ydim-1, 0, xdim-1)
+            self.dataImporter.SetWholeExtent(0, xdim-1, 0, ydim-1, 0, zdim-1)
+
+            alphaChannelFunc = vtk.vtkPiecewiseFunction()
+            alphaChannelFunc.AddPoint(0, 0.0)
+            alphaChannelFunc.AddPoint(1, 1.0)
+            alphaChannelFunc.AddPoint(255, 1.0)
                     
-                    # The following class is used to store transparencyv-values for later retrival. In our case, we want the value 0 to be
-                    # completly opaque whereas the three different cubes are given different transperancy-values to show how it works.
-                    
-                    alphaChannelFunc = vtk.vtkPiecewiseFunction()
-                    alphaChannelFunc.AddPoint(0, 0.0)
-                    alphaChannelFunc.AddPoint(1, 1.0)
-                    #alphaChannelFunc.AddPoint(100, 1.0)
-                    alphaChannelFunc.AddPoint(255, 1.0)
-                    
-                    # This class stores color data and can create color tables from a few color points. For this demo, we want the three cubes
-                    # to be of the colors red green and blue.
-                    colorFunc = vtk.vtkColorTransferFunction()
-                    if(direction == 0):
-                        colorFunc.AddRGBPoint(1, 0.0, 1.0, 1.0)
-                        #colorFunc.AddRGBPoint(170, 0.0, 1.0, 0.0)
-                        colorFunc.AddRGBPoint(255, 1.0, 1.0, 0.0)
-                        #colorFunc.AddRGBPoint(0, 1.0, 1.0, 1.0)
-                    if(direction == 1):
-                        colorFunc.AddRGBPoint(1, 1.0, 0.0, 1.0)
-                        #colorFunc.AddRGBPoint(170, 0.0, 1.0, 0.0)
-                        colorFunc.AddRGBPoint(255, 0.0, 1.0, 1.0)
-                        #colorFunc.AddRGBPoint(0, 1.0, 1.0, 1.0)
-                    if(direction == 2):
-                        colorFunc.AddRGBPoint(1, 1.0, 0.0, 0.0)
-                        #colorFunc.AddRGBPoint(170, 0.0, 1.0, 0.0)
-                        colorFunc.AddRGBPoint(255, 0.0, 0.0, 1.0)
-                        #colorFunc.AddRGBPoint(0, 1.0, 1.0, 1.0)
-                    
-                    # The preavius two classes stored properties. Because we want to apply these properties to the volume we want to render,
-                    # we have to store them in a class that stores volume prpoperties.
-                    volumeProperty = vtk.vtkVolumeProperty()
-                    volumeProperty.SetColor(colorFunc)
-                    volumeProperty.SetScalarOpacity(alphaChannelFunc)
-                    volumeProperty.ShadeOn()
-                    volumeProperty.SetInterpolationTypeToNearest()
+
+            colorFunc = vtk.vtkColorTransferFunction()
+            if(direction == 0):
+                colorFunc.AddRGBPoint(1, 0.0, 1.0, 1.0)
+                colorFunc.AddRGBPoint(255, 1.0, 1.0, 0.0)
+            if(direction == 1):
+                colorFunc.AddRGBPoint(1, 1.0, 0.0, 1.0)
+                colorFunc.AddRGBPoint(255, 0.0, 1.0, 1.0)
+            if(direction == 2):
+                colorFunc.AddRGBPoint(1, 1.0, 0.0, 0.0)
+                colorFunc.AddRGBPoint(255, 0.0, 0.0, 1.0)
+
+            volumeProperty = vtk.vtkVolumeProperty()
+            volumeProperty.SetColor(colorFunc)
+            volumeProperty.SetScalarOpacity(alphaChannelFunc)
+            volumeProperty.ShadeOn()
+            volumeProperty.SetInterpolationTypeToNearest()
                     
                     
-                    # This class describes how the volume is rendered (through ray tracing).
-                    compositeFunction = vtk.vtkVolumeRayCastCompositeFunction()
-                    # We can finally create our volume. We also have to specify the data for it, as well as how the data will be rendered.
-                    volumeMapper = vtk.vtkVolumeRayCastMapper()
-                    volumeMapper.SetVolumeRayCastFunction(compositeFunction)
-                    volumeMapper.SetInputConnection(self.dataImporter.GetOutputPort())
+            # This class describes how the volume is rendered (through ray tracing).
+            compositeFunction = vtk.vtkVolumeRayCastCompositeFunction()
+            # We can finally create our volume. We also have to specify the data for it, as well as how the data will be rendered.
+            volumeMapper = vtk.vtkVolumeRayCastMapper()
+            volumeMapper.SetVolumeRayCastFunction(compositeFunction)
+            volumeMapper.SetInputConnection(self.dataImporter.GetOutputPort())
                     
-                    # The class vtkVolume is used to pair the preaviusly declared volume as well as the properties to be used when rendering that volume.
+   
+            self.volume.SetMapper(volumeMapper)
+            self.volume.SetProperty(volumeProperty)
                     
-                    self.volume.SetMapper(volumeMapper)
-                    self.volume.SetProperty(volumeProperty)
+            self.ren.RemoveActor(self.actor);
                     
-                    # With almost everything else ready, its time to initialize the renderer and window, as well as creating a method for exiting the application
-                    #renderer = vtk.vtkRenderer()
-                    #renderWin = vtk.vtkRenderWindow()
-                    #renderWin.AddRenderer(renderer)
-                    #renderInteractor = vtk.vtkRenderWindowInteractor()
-                    #renderInteractor.SetRenderWindow(renderWin)
+            self.ren.AddVolume(self.volume)
+            self.ren.SetBackground(1, 1, 1)
+            
+            axesActor = vtk.vtkAxesActor()
+            axesActor.AxisLabelsOn()
+            axesActor.SetShaftTypeToCylinder()
+            axesActor.SetCylinderRadius(0.05)
+            self.ren.AddActor(axesActor)
+            
+            self.addPicker()
+            # A simple function to be called when the user decides to quit the application.
+            def exitCheck(obj, event):
+                if obj.GetEventPending() != 0:
+                    obj.SetAbortRender(1)
+                                     
+            # Tell the application to use the function as an exit check.
+            renderWin = self.vtkWidget.GetRenderWindow()
+            renderWin.AddObserver("AbortCheckEvent", exitCheck)
                     
-                    self.ren.RemoveActor(self.actor);
+            self.iren.Initialize()
+            # Initially pick the cell at this location.
+            self.picker.Pick(85, 126, 0, self.ren)
+            self.iren.Start()
+ 
+        else:
+            print "cannot convert to vox"
+     
+    def addPicker(self):
+        self.textMapper = vtk.vtkTextMapper()
+        tprop = self.textMapper.GetTextProperty()
+        tprop.SetFontFamilyToArial()
+        tprop.SetFontSize(10)
+        tprop.BoldOn()
+        tprop.ShadowOn()
+        tprop.SetColor(1, 0, 0)
+        self.textActor = vtk.vtkActor2D()
+        self.textActor.VisibilityOff()
+        self.textActor.SetMapper(self.textMapper)
                     
-                    # We add the volume to the renderer ...
-                    self.ren.AddVolume(self.volume)
-                    # ... set background color to white ...
-                    self.ren.SetBackground(1, 1, 1)
-                    # ... and set window size.
-                    #renderWin.SetSize(800, 800)
+        self.picker = vtk.vtkCellPicker()
                     
-                    # A simple function to be called when the user decides to quit the application.
-                    def exitCheck(obj, event):
-                        if obj.GetEventPending() != 0:
-                            obj.SetAbortRender(1)
-                    
-                    # Create a text mapper and actor to display the results of picking.
-                    self.textMapper = vtk.vtkTextMapper()
-                    tprop = self.textMapper.GetTextProperty()
-                    tprop.SetFontFamilyToArial()
-                    tprop.SetFontSize(10)
-                    tprop.BoldOn()
-                    tprop.ShadowOn()
-                    tprop.SetColor(1, 0, 0)
-                    self.textActor = vtk.vtkActor2D()
-                    self.textActor.VisibilityOff()
-                    self.textActor.SetMapper(self.textMapper)
-                    
-                    # Create a cell picker.
-                    self.picker = vtk.vtkCellPicker()
-                    
-                    # Create a Python function to create the text for the text mapper used
-                    # to display the results of picking.
-                    def annotatePick(object, event):
-                        print("pick")
-                        #global picker, textActor, textMapper
-                        if self.picker.GetCellId() < 0:
-                            self.textActor.VisibilityOff()
-                        else:
-                            selPt = self.picker.GetSelectionPoint()
-                            pickPos = self.picker.GetPickPosition()
-                            pickPosInt = (round(pickPos[0]), round(pickPos[1]),round(pickPos[2]))
-                            pickPosIntStr = str(pickPosInt)
-                            pickPosIntQStr = Qt.QString(pickPosIntStr)
-                            if(self.firstPlanePt.isChecked()):
-                                self.firstPlanePtValueRecord = pickPosInt
-                                self.firstPlanePtValue.setText(pickPosIntQStr)
-                            if(self.secondPlanePt.isChecked()):
-                                self.secondPlanePtValueRecord = pickPosInt
-                                self.secondPlanePtValue.setText(pickPosIntQStr)
-                            if(self.thirdPlanePt.isChecked()):
-                                self.thirdPlanePtValueRecord = pickPosInt
-                                self.thirdPlanePtValue.setText(pickPosIntQStr)
-                            pickValue = self.data_matrix[pickPosInt]
-                            self.textMapper.SetInput("(%.3i, %.3i, %.3i)"%pickPosInt)
-                            print pickValue
-                            self.textActor.SetPosition(selPt[:2])
-                            self.textActor.VisibilityOn()
-                    
-                    # Now at the end of the pick event call the above function.
-                    self.picker.AddObserver("EndPickEvent", annotatePick)
-                    
-                    # Tell the application to use the function as an exit check.
-                    renderWin = self.vtkWidget.GetRenderWindow()
-                    renderWin.AddObserver("AbortCheckEvent", exitCheck)
-                    self.iren.SetPicker(self.picker)
-                    
-                    # Add the actors to the renderer, set the background and size
-                    self.ren.AddActor2D(self.textActor)
-                    
-                    self.confirmPlane.clicked.connect(self.addPlaneCutter)
-                    
-                    self.iren.Initialize()
-                    # Initially pick the cell at this location.
-                    self.picker.Pick(85, 126, 0, self.ren)
-                    self.iren.Start()
-                    
-                    #renderInteractor.Initialize()
-                    # Because nothing will be rendered without any input, we order the first render manually before control is handed over to the main-loop.
-                    #renderWin.Render()
-                    #renderInteractor.Start()    
-                else:
-                    print "cannot convert to vox"
+        def annotatePick(object, event):
+            print("pick")
+            if self.picker.GetCellId() < 0:
+                self.textActor.VisibilityOff()
             else:
-                print "cannot convert to mesh"
+                selPt = self.picker.GetSelectionPoint()
+                pickPos = self.picker.GetPickPosition()
+                pickPosInt = (round(pickPos[0]), round(pickPos[1]),round(pickPos[2]))
+                pickPosIntStr = str(pickPosInt)
+                pickPosIntQStr = Qt.QString(pickPosIntStr)
+            if(self.firstPlanePt.isChecked()):
+                self.firstPlanePtValueRecord = pickPos
+                self.firstPlanePtValue.setText(pickPosIntQStr)
+            if(self.secondPlanePt.isChecked()):
+                self.secondPlanePtValueRecord = pickPos
+                self.secondPlanePtValue.setText(pickPosIntQStr)
+            if(self.thirdPlanePt.isChecked()):
+                self.thirdPlanePtValueRecord = pickPos
+                self.thirdPlanePtValue.setText(pickPosIntQStr)
+            pickValue = self.data_matrix[pickPosInt]
+            self.textMapper.SetInput("(%.3i, %.3i, %.3i)"%pickPosInt)
+            print pickValue
+            self.textActor.SetPosition(selPt[:2])
+            self.textActor.VisibilityOn()
+                    
+        # Now at the end of the pick event call the above function.
+        self.picker.AddObserver("EndPickEvent", annotatePick)
+        self.iren.SetPicker(self.picker)
+        # Add the actors to the renderer, set the background and size
+        self.ren.AddActor2D(self.textActor)
+        
     
     def addPlaneCutter(self):
         self.ren.RemoveActor(self.planeActor)
@@ -321,8 +295,10 @@ class Example(QtGui.QMainWindow):
         plane.SetOrigin(float(self.firstPlanePtValueRecord[0]),float(self.firstPlanePtValueRecord[1]), float(self.firstPlanePtValueRecord[2]) )
         a = np.array([self.secondPlanePtValueRecord[0]-self.firstPlanePtValueRecord[0], self.secondPlanePtValueRecord[1]-self.firstPlanePtValueRecord[1], self.secondPlanePtValueRecord[2]-self.firstPlanePtValueRecord[2]])
         b = np.array([self.thirdPlanePtValueRecord[0]-self.firstPlanePtValueRecord[0], self.thirdPlanePtValueRecord[1]-self.firstPlanePtValueRecord[1],self.thirdPlanePtValueRecord[2]-self.firstPlanePtValueRecord[2]])
-        c = np.cross(a, b)
-        plane.SetNormal(c)
+        self.planeOrigin = self.firstPlanePtValueRecord
+        self.planeNormal = np.cross(a, b)
+        self.planeNormal = self.planeNormal / np.linalg.norm(self.planeNormal)
+        plane.SetNormal(self.planeNormal)
                     
         #create cutter
         cutter=vtk.vtkCutter()
@@ -338,6 +314,86 @@ class Example(QtGui.QMainWindow):
         self.planeActor.SetMapper(cutterMapper)
                     
         self.ren.AddActor(self.planeActor)
+        
+    def convertToVOX2(self):
+        if self.volume != Null:
+            self.ren.RemoveVolume(self.volume)
+        sliceText = self.sliceTextLine.text()
+        sliceInt = sliceText.toUInt()
+        #slcieInt = int(sliceFloat)
+        print sliceInt[0]
+        print type(sliceInt[0])
+        if(execution2(self.meshFile, sliceInt[0], self.planeOrigin, self.planeNormal)):
+            print "cool, it is done"
+            f=gzip.open(self.fname[:-3]+"vox","rb")
+            data=pickle.load(f)
+            self.data_matrix=numpy.uint8(data) 
+            self.dataImporter = vtk.vtkImageImport()
+            data_string = self.data_matrix.tostring()
+            self.dataImporter.CopyImportVoidPointer(data_string, len(data_string))
+            self.dataImporter.SetDataScalarTypeToUnsignedChar()
+            self.dataImporter.SetNumberOfScalarComponents(1)
+            xdim,ydim,zdim=self.data_matrix.shape
+            #self.dataImporter.SetDataExtent(0, zdim-1, 0, ydim-1, 0, xdim-1)
+            self.dataImporter.SetDataExtent(0, xdim-1, 0, ydim-1, 0, zdim-1)
+            #self.dataImporter.SetWholeExtent(0, zdim-1, 0, ydim-1, 0, xdim-1)
+            self.dataImporter.SetWholeExtent(0, xdim-1, 0, ydim-1, 0, zdim-1)
+
+            alphaChannelFunc = vtk.vtkPiecewiseFunction()
+            alphaChannelFunc.AddPoint(0, 0.0)
+            alphaChannelFunc.AddPoint(1, 1.0)
+            alphaChannelFunc.AddPoint(100, 1.0)
+                    
+            colorFunc = vtk.vtkColorTransferFunction()
+            colorFunc.AddRGBPoint(1, 1.0, 0.0, 0.0)
+            colorFunc.AddRGBPoint(100, 0.0, 0.0, 1.0)
+
+            volumeProperty = vtk.vtkVolumeProperty()
+            volumeProperty.SetColor(colorFunc)
+            volumeProperty.SetScalarOpacity(alphaChannelFunc)
+            volumeProperty.ShadeOn()
+            volumeProperty.SetInterpolationTypeToNearest()
+                    
+                    
+            # This class describes how the volume is rendered (through ray tracing).
+            compositeFunction = vtk.vtkVolumeRayCastCompositeFunction()
+            # We can finally create our volume. We also have to specify the data for it, as well as how the data will be rendered.
+            volumeMapper = vtk.vtkVolumeRayCastMapper()
+            volumeMapper.SetVolumeRayCastFunction(compositeFunction)
+            volumeMapper.SetInputConnection(self.dataImporter.GetOutputPort())
+                    
+   
+            self.volume.SetMapper(volumeMapper)
+            self.volume.SetProperty(volumeProperty)
+                    
+            self.ren.RemoveActor(self.actor);
+                    
+            self.ren.AddVolume(self.volume)
+            self.ren.SetBackground(1, 1, 1)
+            
+            axesActor = vtk.vtkAxesActor()
+            axesActor.AxisLabelsOn()
+            axesActor.SetShaftTypeToCylinder()
+            axesActor.SetCylinderRadius(0.05)
+            self.ren.AddActor(axesActor)
+            
+            self.addPicker()
+            # A simple function to be called when the user decides to quit the application.
+            def exitCheck(obj, event):
+                if obj.GetEventPending() != 0:
+                    obj.SetAbortRender(1)
+                                     
+            # Tell the application to use the function as an exit check.
+            renderWin = self.vtkWidget.GetRenderWindow()
+            renderWin.AddObserver("AbortCheckEvent", exitCheck)
+                    
+            self.iren.Initialize()
+            # Initially pick the cell at this location.
+            self.picker.Pick(85, 126, 0, self.ren)
+            self.iren.Start()
+ 
+        else:
+            print "cannot convert to vox"
         
                     
 def main():
