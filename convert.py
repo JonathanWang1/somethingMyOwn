@@ -7,6 +7,7 @@ import gzip
 import itertools
 
 ###### Helper functions #####
+
 def makeHash(p):
 	'''casts the input to a numpy array and returns a string hash representing the object'''
 	n=numpy.array([p[0],p[1],p[2]])
@@ -22,6 +23,7 @@ def linePointers(T):
 	return [LineStr.index(repr(i)) for i in T]
 
 ###### Conversion Algorithm ######
+"""Convert STL file to mesh"""
 def convert(fname):
 	try:
 		safeThreads=int(multiprocessing.cpu_count()-2)

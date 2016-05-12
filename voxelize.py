@@ -12,14 +12,20 @@ class Voxelize:
 	def execution(self, fileName,direction, sliceInt):
 		try:
 			self.vox = meshLib()
-			vertices,triangles=self.vox.loadmesh(fileName)
+			vertices,triangles = self.vox.loadmesh(fileName)
 			#slices = 101
 			#res=float(0.999)
 			result=self.vox.voxelize1(vertices,triangles,sliceInt,direction)
-			fname=fileName[:-4]+"vox"
-			print "...saving voxel data to: "+fname
-			f=gzip.open(fname,"wb")
-			pickle.dump(result,f)
+			fnameR=fileName[:-4]+"voxr"
+			fnameG=fileName[:-4]+"voxg"
+			fnameB=fileName[:-4]+"voxb"
+			print "...saving voxel data to: "+fnameR
+			fr=gzip.open(fnameR,"wb")
+			pickle.dump(result[0],fr)
+			fg=gzip.open(fnameG,"wb")
+			pickle.dump(result[1],fg)
+			fb=gzip.open(fnameB,"wb")
+			pickle.dump(result[2],fb)
 			return True
 		except:
 			print "Something wasn't right....\n\tcorrect usage: python voxelize.py <mesh file> <resolution>"
@@ -32,10 +38,16 @@ class Voxelize:
 			#slices = 101
 			#res=float(0.999)
 			result=self.vox.voxelize2(vertices,triangles, planeOrigin, planeNormal)
-			fname=fileName[:-4]+"vox"
-			print "...saving voxel data to: "+fname
-			f=gzip.open(fname,"wb")
-			pickle.dump(result,f)
+			fnameR=fileName[:-4]+"voxr"
+			fnameG=fileName[:-4]+"voxg"
+			fnameB=fileName[:-4]+"voxb"
+			print "...saving voxel data to: "+fnameR
+			fr=gzip.open(fnameR,"wb")
+			pickle.dump(result[0],fr)
+			fg=gzip.open(fnameG,"wb")
+			pickle.dump(result[1],fg)
+			fb=gzip.open(fnameB,"wb")
+			pickle.dump(result[2],fb)
 			return True
 		except:
 			print "Something wasn't right....\n\tcorrect usage: python voxelize.py <mesh file> <resolution>"
@@ -46,27 +58,146 @@ class Voxelize:
 			
 			#vertices,triangles=self.vox.loadmesh(fileName)
 			result=self.vox.voxelize3(pointValue)
-			fname=fileName[:-4]+"vox"
-			print "...saving voxel data to: "+fname
-			f=gzip.open(fname,"wb")
-			pickle.dump(result,f)
+			fnameR=fileName[:-4]+"voxr"
+			fnameG=fileName[:-4]+"voxg"
+			fnameB=fileName[:-4]+"voxb"
+			print "...saving voxel data to: "+fnameR
+			fr=gzip.open(fnameR,"wb")
+			pickle.dump(result[0],fr)
+			fg=gzip.open(fnameG,"wb")
+			pickle.dump(result[1],fg)
+			fb=gzip.open(fnameB,"wb")
+			pickle.dump(result[2],fb)
 			return True
 		except:
 			print "Something wasn't right....\n\tcorrect usage: python voxelize.py <mesh file> <resolution>"
 			return False
 	
-	def execution4(self, fileName, planeOrigin, planeNormal, pointValue, planeWeight, pointWeight):
+	def execution4(self, fileName, materials):
 		try:
-			result=self.vox.voxelize4(planeOrigin, planeNormal, pointValue, planeWeight, pointWeight)
-			fname=fileName[:-4]+"vox"
-			print "...saving voxel data to: "+fname
-			f=gzip.open(fname,"wb")
-			pickle.dump(result,f)
+			result=self.vox.voxelize4(materials)
+			fnameR=fileName[:-4]+"voxr"
+			fnameG=fileName[:-4]+"voxg"
+			fnameB=fileName[:-4]+"voxb"
+			print "...saving voxel data to: "+fnameR
+			fr=gzip.open(fnameR,"wb")
+			pickle.dump(result[0],fr)
+			fg=gzip.open(fnameG,"wb")
+			pickle.dump(result[1],fg)
+			fb=gzip.open(fnameB,"wb")
+			pickle.dump(result[2],fb)
+			return True
+		except:
+			print "Something wasn't right....\n\tcorrect usage: python voxelize.py <mesh file> <resolution>"
+			return False
+		
+	def execution5(self, fileName):
+		try:
+			result=self.vox.voxelRadience()
+			fnameR=fileName[:-4]+"voxr"
+			fnameG=fileName[:-4]+"voxg"
+			fnameB=fileName[:-4]+"voxb"
+			print "...saving voxel data to: "+fnameR
+			fr=gzip.open(fnameR,"wb")
+			pickle.dump(result[0],fr)
+			fg=gzip.open(fnameG,"wb")
+			pickle.dump(result[1],fg)
+			fb=gzip.open(fnameB,"wb")
+			pickle.dump(result[2],fb)
+			return True
+		except:
+			print "Something wasn't right....\n\tcorrect usage: python voxelize.py <mesh file> <resolution>"
+			return False
+		
+	def execution6(self, fileName, size, sigma):
+		try:
+			result=self.vox.voxelfilterPrepare(size, sigma)
+			fnameR=fileName[:-4]+"voxr"
+			fnameG=fileName[:-4]+"voxg"
+			fnameB=fileName[:-4]+"voxb"
+			print "...saving voxel data to: "+fnameR
+			fr=gzip.open(fnameR,"wb")
+			pickle.dump(result[0],fr)
+			fg=gzip.open(fnameG,"wb")
+			pickle.dump(result[1],fg)
+			fb=gzip.open(fnameB,"wb")
+			pickle.dump(result[2],fb)
+			return True
+		except:
+			print "Something wasn't right....\n\tcorrect usage: python voxelize.py <mesh file> <resolution>"
+			return False
+		
+	def execution7(self, fileName, triangleSelected, depth, materials):
+		try:
+			result=self.vox.depthFaceSelect(triangleSelected, depth, materials)
+			fnameR=fileName[:-4]+"voxr"
+			fnameG=fileName[:-4]+"voxg"
+			fnameB=fileName[:-4]+"voxb"
+			print "...saving voxel data to: "+fnameR
+			fr=gzip.open(fnameR,"wb")
+			pickle.dump(result[0],fr)
+			fg=gzip.open(fnameG,"wb")
+			pickle.dump(result[1],fg)
+			fb=gzip.open(fnameB,"wb")
+			pickle.dump(result[2],fb)
+			return True
+		except:
+			print "Something wasn't right....\n\tcorrect usage: python voxelize.py <mesh file> <resolution>"
+			return False
+		
+	def execution8(self, fileName, size, materials):
+		try:
+			result=self.vox.voxelfilterPrepareForAverage(size, materials)
+			fnameR=fileName[:-4]+"voxr"
+			fnameG=fileName[:-4]+"voxg"
+			fnameB=fileName[:-4]+"voxb"
+			print "...saving voxel data to: "+fnameR
+			fr=gzip.open(fnameR,"wb")
+			pickle.dump(result[0],fr)
+			fg=gzip.open(fnameG,"wb")
+			pickle.dump(result[1],fg)
+			fb=gzip.open(fnameB,"wb")
+			pickle.dump(result[2],fb)
+			return True
+		except:
+			print "Something wasn't right....\n\tcorrect usage: python voxelize.py <mesh file> <resolution>"
+			return False
+		
+	def execution9(self, fileName, materialSet, materialNumber, ratioArray):
+		try:
+			result=self.vox.deadPointAdd(materialSet, materialNumber, ratioArray)
+			fnameR=fileName[:-4]+"voxr"
+			fnameG=fileName[:-4]+"voxg"
+			fnameB=fileName[:-4]+"voxb"
+			print "...saving voxel data to: "+fnameR
+			fr=gzip.open(fnameR,"wb")
+			pickle.dump(result[0],fr)
+			fg=gzip.open(fnameG,"wb")
+			pickle.dump(result[1],fg)
+			fb=gzip.open(fnameB,"wb")
+			pickle.dump(result[2],fb)
+			return True
+		except:
+			print "Something wasn't right....\n\tcorrect usage: python voxelize.py <mesh file> <resolution>"
+			return False
+	def execution10(self, fileName, materials, materialNumber):
+		try:
+			result=self.vox.showIndependent(materials, materialNumber)
+			fnameR=fileName[:-4]+"voxr"
+			fnameG=fileName[:-4]+"voxg"
+			fnameB=fileName[:-4]+"voxb"
+			print "...saving voxel data to: "+fnameR
+			fr=gzip.open(fnameR,"wb")
+			pickle.dump(result[0],fr)
+			fg=gzip.open(fnameG,"wb")
+			pickle.dump(result[1],fg)
+			fb=gzip.open(fnameB,"wb")
+			pickle.dump(result[2],fb)
 			return True
 		except:
 			print "Something wasn't right....\n\tcorrect usage: python voxelize.py <mesh file> <resolution>"
 			return False		
-	
+		
 if __name__ == "__main__":
 	voxelize = Voxelize()
 	voxelize.execution("../sphere.mesh")
